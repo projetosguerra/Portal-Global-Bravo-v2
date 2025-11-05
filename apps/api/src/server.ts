@@ -1,15 +1,9 @@
-import Fastify from 'fastify';
-import cors from '@fastify/cors';
+import { buildApp } from './app';
+import { env } from './utils/env';
 
-const app = Fastify({ logger: true });
+const app = buildApp();
 
-await app.register(cors, {
-  origin: true, // ajuste depois para a URL do seu front
-});
-
-app.get('/health', async () => ({ ok: true }));
-
-const port = Number(process.env.PORT ?? 4001);
+const port = Number(env.PORT);
 app.listen({ port, host: '0.0.0.0' }).then(() => {
-  app.log.info(`API running on ${port}`);
+  app.log.info(`API running on http://localhost:${port}`);
 });

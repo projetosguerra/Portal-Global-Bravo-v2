@@ -18,7 +18,7 @@ const links = [
     )
   },
   { 
-    href: '/dashboard/sac', 
+    href: '/dashboard/meus-pedidos', 
     label: 'SAC',
     icon: (
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -27,7 +27,7 @@ const links = [
     )
   },
   { 
-    href: '/dashboard/pacientes', 
+    href: '/dashboard/financeiro', 
     label: 'Produtos',
     icon: (
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -38,7 +38,7 @@ const links = [
     )
   },
   { 
-    href: '/dashboard/agenda', 
+    href: '/dashboard/entregas', 
     label: 'Agenda',
     icon: (
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -50,7 +50,7 @@ const links = [
     )
   },
   { 
-    href: '/dashboard/relatorios', 
+    href: '/dashboard/sac', 
     label: 'Relatórios',
     icon: (
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -61,17 +61,7 @@ const links = [
         <polyline points="10 9 9 9 8 9"/>
       </svg>
     )
-  },
-  { 
-    href: '/dashboard/configuracoes', 
-    label: 'Configurações',
-    icon: (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-        <circle cx="12" cy="12" r="3"/>
-        <path d="M12 1v6m0 6v6m5.196-13.196l-4.242 4.242m0 6L17.196 23M1 12h6m6 0h6m-13.196 5.196l4.242-4.242m0-6L4.804 1"/>
-      </svg>
-    )
-  },
+  }
 ];
 
 interface SidebarProps {
@@ -96,7 +86,6 @@ export function Sidebar({ isOpen = false, onClose }: SidebarProps) {
   };
 
   const handleLinkClick = () => {
-    // Fecha o menu mobile ao clicar em um link
     if (onClose) onClose();
   };
   
@@ -113,7 +102,6 @@ export function Sidebar({ isOpen = false, onClose }: SidebarProps) {
       {/* Sidebar */}
       <aside className={clsx(
         'fixed left-0 top-0 h-screen w-60 shrink-0 bg-gradient-to-b from-[#1e3a5f] to-[#0f1e3a] text-white shadow-2xl flex flex-col overflow-hidden z-50 transition-transform duration-300',
-        // Mobile: esconde por padrão, mostra quando isOpen
         'lg:translate-x-0',
         isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
       )}>
