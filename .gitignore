@@ -1,0 +1,17 @@
+# Node
+node_modules/
+**/node_modules/
+pnpm-lock.yaml
+
+# Build
+.next/
+dist/
+out/
+
+# Env
+.env*
+!.env.example
+
+# OS
+.DS_Store
+Thumbs.db

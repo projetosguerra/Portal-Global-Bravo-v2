@@ -1,0 +1,13 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg: #EEF3F8;
+}
+html, body {
+  height: 100%;
+}
+body {
+  @apply bg-[var(--bg)] text-slate-800;
+}
