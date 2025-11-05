@@ -1,11 +1,57 @@
 import { Card } from '@pgb/ui';
+import type { ReactElement } from 'react';
 import { dashboard as sdk } from '@pgb/sdk';
 import { LineAreaChart } from '../../../components/charts/LineAreaChart';
 import { RecentOrdersTable } from '../../../components/dashboard/RecentOrdersTable';
 import { DocsValidity } from '../../../components/dashboard/DocsValidity';
 
-export default async function DashboardPage() {
-  const [kpis, recent, sacSeries, orders, docs] = await Promise.all([
+interface KPI {
+  label: string;
+  value: string | number;
+  delta?: number | null;
+}
+
+interface Patient {
+  id: string;
+  name: string;
+  lastVisit: string;
+  status: string;
+}
+
+interface SACDataset {
+  label: string;
+  data: number[];
+  borderColor: string;
+  backgroundColor: string;
+  tension?: number;
+  fill?: boolean;
+  [key: string]: any;
+}
+
+interface SACSeries {
+  labels: string[];
+  datasets: SACDataset[];
+}
+
+interface RecentOrder {
+  orderNumber: string;
+  seller: string;
+  total: number;
+  status: 'faturado' | 'bloqueado' | 'liberado';
+  [key: string]: any;
+}
+
+interface DocAlert {
+  description: string;
+  dueDate: string;
+  docNumber: string;
+  status: 'valido' | 'vencido' | 'proximo_vencer';
+  [key: string]: any;
+}
+
+
+export default async function DashboardPage(): Promise<ReactElement> {
+  const [kpis, recent, sacSeries, orders, docs]: [KPI[], Patient[], SACSeries, RecentOrder[], DocAlert[]] = await Promise.all([
     sdk.getMetrics(),
     sdk.getRecentPatients(),
     sdk.getSACSeries(),
@@ -18,8 +64,8 @@ export default async function DashboardPage() {
   return (
     <div className="space-y-4 sm:space-y-6">
       <section className="grid gap-3 sm:gap-4 lg:gap-5 grid-cols-2 lg:grid-cols-4">
-        {kpis.map((k, index) => {
-          const icons = [
+        {kpis.map((k: KPI, index: number) => {
+          const icons: ReactElement[] = [
             <svg key="1" width="20" height="20" className="sm:w-6 sm:h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
               <circle cx="9" cy="7" r="4"/>
@@ -39,7 +85,7 @@ export default async function DashboardPage() {
             </svg>,
           ];
           
-          const gradients = [
+          const gradients: string[] = [
             'from-blue-500 to-blue-600',
             'from-emerald-500 to-emerald-600',
             'from-orange-500 to-orange-600',
@@ -93,7 +139,7 @@ export default async function DashboardPage() {
           </div>
           
           <div className="space-y-3 sm:space-y-4">
-            {recent.map((p, idx) => (
+            {recent.map((p: Patient, idx: number) => (
               <div key={p.id} className="flex items-center gap-3 sm:gap-4 p-2 sm:p-3 rounded-xl hover:bg-gray-50 transition-colors group">
                 <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-gradient-to-br from-[#4a90e2] to-[#2563eb] flex items-center justify-center text-white text-sm sm:text-base font-bold flex-shrink-0">
                   {p.name.charAt(0)}
