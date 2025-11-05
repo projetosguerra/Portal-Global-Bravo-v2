@@ -7,10 +7,6 @@ settings:
 importers:
 
   .:
-    dependencies:
-      '@pgb/sdk':
-        specifier: workspace:^
-        version: link:packages/sdk
     devDependencies:
       '@types/node':
         specifier: ^20.11.30
