@@ -22,12 +22,13 @@ export async function getConnection(): Promise<oracledb.Connection> {
   const conn = await p.getConnection();
 
   if (env.ORACLE_CURRENT_SCHEMA) {
-    const schema = env.ORACLE_CURRENT_SCHEMA.trim();
-    if (!/^[A-Z0-9_]+$/i.test(schema)) {
-      await conn.close().catch(() => {});
-      throw new Error('Invalid ORACLE_CURRENT_SCHEMA');
+    try {
+      const schema = env.ORACLE_CURRENT_SCHEMA.trim();
+      if (!/^[A-Z0-9_]+$/i.test(schema)) throw new Error('Invalid ORACLE_CURRENT_SCHEMA');
+      await conn.execute(`ALTER SESSION SET CURRENT_SCHEMA = ${schema.toUpperCase()}`);
+    } catch (err) {
+      console.warn('[oracle] CURRENT_SCHEMA not applied:', (err as Error).message);
     }
-    await conn.execute(`ALTER SESSION SET CURRENT_SCHEMA = ${schema.toUpperCase()}`);
   }
   return conn;
 }
