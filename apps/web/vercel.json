@@ -1,0 +1,5 @@
+{
+  "framework": "nextjs",
+  "installCommand": "pnpm install --filter=@pgb/web... --no-frozen-lockfile",
+  "buildCommand": "pnpm -w turbo run build --filter=@pgb/web^..."
+}
