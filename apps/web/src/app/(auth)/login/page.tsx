@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { Suspense, useState, useTransition } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -11,6 +11,8 @@ import { Button } from '../../../components/ui/button';
 import { BrandLogo } from '../../../components/brand-logo';
 import { loginAction } from '../actions';
 
+export const dynamic = 'force-dynamic'; 
+
 const schema = z.object({
   email: z.string().email('Informe um e-mail válido'),
   password: z.string().min(6, 'Mínimo de 6 caracteres'),
@@ -18,7 +20,7 @@ const schema = z.object({
 
 type FormData = z.infer<typeof schema>;
 
-export default function LoginPage() {
+function LoginContent() {
   const router = useRouter();
   const search = useSearchParams();
   const [serverError, setServerError] = useState<string | null>(null);
@@ -92,5 +94,13 @@ export default function LoginPage() {
         </Link>
       </p>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={null}>
+      <LoginContent />
+    </Suspense>
   );
 }
