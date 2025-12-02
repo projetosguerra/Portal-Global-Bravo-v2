@@ -15,7 +15,7 @@ export const dynamic = 'force-dynamic';
 
 const schema = z.object({
   email: z.string().email('Informe um e-mail válido'),
-  password: z.string().min(6, 'Mínimo de 6 caracteres'),
+  password: z.string().min(3, 'Mínimo de 3 caracteres'),
 });
 
 type FormData = z.infer<typeof schema>;

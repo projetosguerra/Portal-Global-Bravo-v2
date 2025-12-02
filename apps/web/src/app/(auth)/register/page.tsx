@@ -62,7 +62,6 @@ export default function RegisterPage() {
   const onSubmit = (data: FormData) => {
     setServerError(null);
     startTransition(async () => {
-      // Envie para a action a versão sem máscara (preparado para backend futuro)
       const res = await registerAction({
         cnpj: unmask(data.cnpj),
         name: data.name,
@@ -94,7 +93,6 @@ export default function RegisterPage() {
                 id="cnpj"
                 placeholder="00.000.000/0000-00"
                 inputMode="numeric"
-                // aplica máscara a cada digitação
                 value={field.value}
                 onChange={(e) => field.onChange(maskCNPJ(e.target.value))}
               />
