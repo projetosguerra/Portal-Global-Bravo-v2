@@ -1,20 +1,19 @@
 'use server';
 
-import { tickets as sdk } from '@pgb/sdk';
+import { cookies } from 'next/headers';
+import router from 'next/router';
 
-export async function searchTicketsAction(form: {
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:4001';
+
+export async function searchTicketsAction(_form: {
   dateFrom?: string;
   dateTo?: string;
   status?: 'todos' | 'em_andamento' | 'finalizado';
   orderNumber?: string;
   invoiceNumber?: string;
 }) {
-  try {
-    const list = await sdk.searchTickets(form);
-    return { ok: true, list };
-  } catch (e: any) {
-    return { ok: false, message: e?.message ?? 'Falha ao buscar tickets' };
-  }
+  // Placeholder: implementarei dps
+  return { ok: true, list: [] as any[] };
 }
 
 export async function createTicketAction(form: {
@@ -23,9 +22,33 @@ export async function createTicketAction(form: {
   invoiceNumber?: string;
 }) {
   try {
-    const t = await sdk.createTicket(form);
-    return { ok: true, ticket: t };
+    const token = (await cookies()).get('pgb_session')?.value;
+    if (!token) return { ok: false, message: 'Sem sessão' };
+
+    const res = await fetch(`${API_BASE}/dashboard/sac/tickets`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        subject: form.subject,
+        orderNumber: form.orderNumber || undefined,
+        invoiceNumber: form.invoiceNumber || undefined,
+      }),
+      cache: 'no-store',
+    });
+
+    alert('Ticket criado com sucesso'); router.push('/dashboard/sac');
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      return { ok: false, message: err?.error || `Falha ao criar ticket (${res.status})` };
+    }
+
+    const data = await res.json();
+    return { ok: true, ticket: data?.ticket };
   } catch (e: any) {
-    return { ok: false, message: e?.message ?? 'Falha ao criar ticket' };
+    return { ok: false, message: e?.message ?? 'Erro inesperado ao criar ticket' };
   }
 }

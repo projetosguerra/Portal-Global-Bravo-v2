@@ -26,6 +26,8 @@ export default function NovoTicketPage() {
         router.push('/dashboard/sac');
       }
     });
+
+    console.log('[novo] submit', { subject, orderNumber, invoiceNumber });
   };
 
   return (
@@ -164,8 +166,8 @@ export default function NovoTicketPage() {
               Cancelar
             </Button>
             <Button 
-              type="button" 
-              onClick={onSubmit} 
+              type="button"
+              onClick={() => { console.log('[novo] submit', { subject, orderNumber, invoiceNumber }); onSubmit(); }} 
               loading={isPending}
               disabled={!subject.trim()}
               className="w-full sm:w-auto"
