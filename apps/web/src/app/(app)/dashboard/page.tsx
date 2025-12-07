@@ -15,6 +15,10 @@ export default async function DashboardPage(): Promise<ReactElement> {
   const docs = await fetchDocsValidity();
   const sacSeries = await fetchSacSeries();
 
+  const hasNoSession =
+    sacSeries.datasets[0].label.includes('sem sessão') ||
+    sacSeries.datasets[0].label.includes('erro');
+
   return (
     <div className="space-y-4 sm:space-y-6">
       <section className="grid gap-3 sm:gap-4 lg:gap-5 grid-cols-2 lg:grid-cols-4">
@@ -63,11 +67,15 @@ export default async function DashboardPage(): Promise<ReactElement> {
           <div className="mb-3 sm:mb-4">
             <h2 className="text-base sm:text-lg font-bold text-gray-900 truncate">SAC - Séries (Hoje)</h2>
             <p className="text-xs sm:text-sm text-gray-500 truncate">Distribuição por hora</p>
+            {hasNoSession && (
+              <p className="mt-2 text-xs sm:text-sm text-amber-600">
+                Não foi possível carregar as séries do SAC ({sacSeries.datasets[0].label.replace('Resolvidos ', '').replace(/\(|\)/g, '')}). Exibindo dados vazios.
+              </p>
+            )}
           </div>
           <LineAreaChart labels={sacSeries.labels} datasets={sacSeries.datasets} height={280} />
         </Card>
 
-        {/* Espaço para evolução futura do SAC */}
         <Card className="p-4 sm:p-6 hover:shadow-xl transition-shadow duration-300">
           <div className="min-w-0 flex-1">
             <h2 className="text-base sm:text-lg font-bold text-gray-900 truncate">SAC - Próximas ações</h2>

@@ -18,13 +18,13 @@ function empty24(): number[] {
     return Array.from({ length: 24 }, () => 0);
 }
 
-function hourIdx(d: any): number {
+export function hourIdx(d: any): number {
     const dt = new Date(d);
     const h = dt.getHours();
     return Math.max(0, Math.min(23, h));
 }
 
-function classify(row: any): 'resolved' | 'in_progress' | 'pending' {
+export function classify(row: any): 'resolved' | 'in_progress' | 'pending' {
     const status = String(row.STATUS ?? '').trim().toLowerCase();
     const finalized = row.DTFINALIZA != null;
     if (finalized) return 'resolved';
@@ -163,4 +163,4 @@ export async function createTicket(input: CreateTicketInput): Promise<CreateTick
     } finally {
         await conn.close();
     }
-}
+} 

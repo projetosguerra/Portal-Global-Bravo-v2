@@ -11,6 +11,7 @@ export default function NovoTicketPage() {
   const [orderNumber, setOrderNumber] = useState('');
   const [invoiceNumber, setInvoiceNumber] = useState('');
   const [files, setFiles] = useState<FileList | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string>('');
   const [isPending, startTransition] = useTransition();
   const today = new Date().toISOString().slice(0,10);
 
@@ -23,7 +24,10 @@ export default function NovoTicketPage() {
     startTransition(async () => {
       const res = await createTicketAction({ subject, orderNumber, invoiceNumber });
       if (res.ok) {
+        setErrorMessage('');
         router.push('/dashboard/sac');
+      } else {
+        setErrorMessage(res.message ?? 'Falha ao salvar o ticket');
       }
     });
 
@@ -38,6 +42,11 @@ export default function NovoTicketPage() {
 
       <Card className="p-4 sm:p-5 lg:p-6">
         <div className="space-y-4 sm:space-y-5">
+          {errorMessage && (
+            <div className="rounded-lg border border-red-200 bg-red-50 p-3 sm:p-4 text-red-700 text-sm sm:text-base">
+              {errorMessage}
+            </div>
+          )}
           <div className="flex items-center gap-3 pb-4 border-b border-gray-200">
             <div className="p-2 bg-blue-100 rounded-lg">
               <svg width="20" height="20" className="sm:w-6 sm:h-6 text-blue-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
