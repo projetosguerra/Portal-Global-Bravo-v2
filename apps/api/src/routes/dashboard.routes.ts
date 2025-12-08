@@ -1,12 +1,11 @@
 import type { FastifyInstance } from 'fastify';
 import { getDashboardSummary, getDashboardKpis } from '../controllers/dashboardController';
 import { verifyToken } from '../utils/token';
-import { env } from '../utils/env';
+import { env, OWNER } from '../utils/env';
 import { getRecentOrders } from '../controllers/ordersController';
 import { getDocsValidity } from '../controllers/docsController';
 import { getSACSeries, createTicket } from '../controllers/sacController';
 import { select } from '../db/query';
-import { OWNER } from '../utils/env';
 
 function normalizeStatus(status: any, dtFinaliza: any): 'pendente' | 'em_andamento' | 'finalizado' {
   if (dtFinaliza != null) return 'finalizado';
@@ -88,6 +87,7 @@ export default async function dashboardRoutes(app: FastifyInstance) {
     }
   });
 
+  // LISTAGEM (Epic 2) - já implementada anteriormente
   app.get('/sac/tickets', async (req, reply) => {
     try {
       const auth = req.headers.authorization;
@@ -136,7 +136,6 @@ export default async function dashboardRoutes(app: FastifyInstance) {
         binds.NUMNOTA = Number(q.invoiceNumber);
       }
       if (q.status && q.status !== 'todos') {
-        // Mapeamento por status: traduzimos filtro para condições Oracle
         if (q.status === 'finalizado') {
           where.push('BRSACC.DTFINALIZA IS NOT NULL');
         } else if (q.status === 'pendente') {
@@ -148,6 +147,9 @@ export default async function dashboardRoutes(app: FastifyInstance) {
         }
       }
 
+      // dentro do handler de GET /sac/tickets, logo após extrair codcli e q:
+      app.log.info({ codcli, q }, 'SAC tickets query');
+
       const baseWhere = where.length ? `WHERE ${where.join(' AND ')}` : '';
       const rows = await select<any>(
         `
@@ -158,8 +160,7 @@ export default async function dashboardRoutes(app: FastifyInstance) {
           BRSACC.NUMPED,
           BRSACC.NUMNOTA,
           BRSACC.RELATOCLIENTE,
-          BRSACC.STATUS,
-          BRSACC.ORIGEM
+          BRSACC.STATUS
         FROM ${OWNER}.BRSACC
         ${baseWhere}
         ORDER BY BRSACC.DTABERTURA DESC
@@ -168,7 +169,6 @@ export default async function dashboardRoutes(app: FastifyInstance) {
         { ...binds, OFFSET: offset, LIMIT: pageSize }
       );
 
-      // total para paginação
       const countRows = await select<{ TOTAL: number }>(
         `
         SELECT COUNT(*) AS TOTAL
@@ -186,11 +186,91 @@ export default async function dashboardRoutes(app: FastifyInstance) {
         orderNumber: r.NUMPED ?? undefined,
         invoiceNumber: r.NUMNOTA ?? undefined,
         subject: String(r.RELATOCLIENTE ?? ''),
-        origin: r.ORIGEM ? String(r.ORIGEM) : undefined,
         status: normalizeStatus(r.STATUS, r.DTFINALIZA),
       }));
 
+      app.log.info({ count: rows.length, total }, 'SAC tickets result');
+
       return reply.send({ ok: true, list, page, pageSize, total });
+    } catch (err) {
+      return reply.status(400).send({ error: (err as Error).message });
+    }
+  });
+
+  // DETALHE (Epic 4)
+  app.get('/sac/tickets/:id', async (req, reply) => {
+    try {
+      const auth = req.headers.authorization;
+      if (!auth?.startsWith('Bearer ')) return reply.status(401).send({ error: 'Token ausente' });
+      const t = auth.slice(7);
+      const v = verifyToken(t, env.JWT_SECRET);
+      if (!v.ok) return reply.status(401).send({ error: v.error });
+      const codcli = Number(v.payload?.codcli);
+      if (!codcli) return reply.status(400).send({ error: 'CODCLI inválido no token' });
+
+      const id = String((req.params as any)?.id ?? '').trim();
+      if (!/^\d+$/.test(id)) return reply.status(400).send({ error: 'ID inválido' });
+      const numTicket = Number(id);
+
+      const rows = await select<any>(
+        `
+        SELECT
+          BRSACC.NUMTICKET,
+          BRSACC.DTABERTURA,
+          BRSACC.DTFINALIZA,
+          BRSACC.NUMPED,
+          BRSACC.NUMNOTA,
+          BRSACC.RELATOCLIENTE,
+          BRSACC.STATUS,
+          BRSACC.CODFILIAL
+        FROM ${OWNER}.BRSACC
+        WHERE BRSACC.NUMTICKET = :NUMTICKET
+          AND BRSACC.NUMTICKET = BRSACC.NUMTICKETPRINC
+          AND BRSACC.CODCLI = :CODCLI
+          AND NVL(BRSACC.STATUS,'') <> 'Cancelado'
+        `,
+        { NUMTICKET: numTicket, CODCLI: codcli }
+      );
+
+      if (!rows.length) return reply.status(404).send({ error: 'Ticket não encontrado' });
+      const r = rows[0];
+
+      const ticket = {
+        id: String(r.NUMTICKET),
+        openedAt: new Date(r.DTABERTURA).toISOString(),
+        closedAt: r.DTFINALIZA ? new Date(r.DTFINALIZA).toISOString() : undefined,
+        orderNumber: r.NUMPED ?? undefined,
+        invoiceNumber: r.NUMNOTA ?? undefined,
+        subject: String(r.RELATOCLIENTE ?? ''),
+        status: normalizeStatus(r.STATUS, r.DTFINALIZA),
+        branch: r.CODFILIAL ? String(r.CODFILIAL) : undefined,
+      };
+
+      const history = await select<any>(
+        `
+        SELECT
+          BRSACC.NUMSEQ,
+          BRSACC.DTABERTURA AS DTMOV,
+          BRSACC.DTFINALIZA AS DTMOV_FINAL,
+          BRSACC.RELATOCLIENTE AS DESCRICAO,
+          BRSACC.STATUS
+        FROM ${OWNER}.BRSACC
+        WHERE BRSACC.NUMTICKETPRINC = :NUMTICKET
+          AND BRSACC.CODCLI = :CODCLI
+          AND NVL(BRSACC.STATUS,'') <> 'Cancelado'
+        ORDER BY BRSACC.NUMSEQ ASC
+        `,
+        { NUMTICKET: numTicket, CODCLI: codcli }
+      );
+
+      const timeline = history.map((h) => ({
+        seq: Number(h.NUMSEQ),
+        when: new Date(h.DTMOV ?? h.DTMOV_FINAL ?? r.DTABERTURA).toISOString(),
+        description: String(h.DESCRICAO ?? ''),
+        status: normalizeStatus(h.STATUS, h.DTMOV_FINAL),
+      }));
+
+      return reply.send({ ok: true, ticket, timeline });
     } catch (err) {
       return reply.status(400).send({ error: (err as Error).message });
     }
@@ -220,88 +300,6 @@ export default async function dashboardRoutes(app: FastifyInstance) {
       });
 
       return reply.send({ ok: true, ticket: created });
-    } catch (err) {
-      return reply.status(400).send({ error: (err as Error).message });
-    }
-  });
-
-  app.get('/sac/tickets/:id', async (req, reply) => {
-    try {
-      const auth = req.headers.authorization;
-      if (!auth?.startsWith('Bearer ')) return reply.status(401).send({ error: 'Token ausente' });
-      const t = auth.slice(7);
-      const v = verifyToken(t, env.JWT_SECRET);
-      if (!v.ok) return reply.status(401).send({ error: v.error });
-      const codcli = Number(v.payload?.codcli);
-      if (!codcli) return reply.status(400).send({ error: 'CODCLI inválido no token' });
-
-      const id = String((req.params as any)?.id ?? '').trim();
-      if (!/^\d+$/.test(id)) return reply.status(400).send({ error: 'ID inválido' });
-      const numTicket = Number(id);
-
-      // Ticket principal
-      const rows = await select<any>(
-        `
-        SELECT
-          BRSACC.NUMTICKET,
-          BRSACC.DTABERTURA,
-          BRSACC.DTFINALIZA,
-          BRSACC.NUMPED,
-          BRSACC.NUMNOTA,
-          BRSACC.RELATOCLIENTE,
-          BRSACC.STATUS,
-          BRSACC.ORIGEM,
-          BRSACC.CODFILIAL
-        FROM ${OWNER}.BRSACC
-        WHERE BRSACC.NUMTICKET = :NUMTICKET
-          AND BRSACC.NUMTICKET = BRSACC.NUMTICKETPRINC
-          AND BRSACC.CODCLI = :CODCLI
-          AND NVL(BRSACC.STATUS,'') <> 'Cancelado'
-        `,
-        { NUMTICKET: numTicket, CODCLI: codcli }
-      );
-
-      if (!rows.length) return reply.status(404).send({ error: 'Ticket não encontrado' });
-      const r = rows[0];
-
-      const ticket = {
-        id: String(r.NUMTICKET),
-        openedAt: new Date(r.DTABERTURA).toISOString(),
-        closedAt: r.DTFINALIZA ? new Date(r.DTFINALIZA).toISOString() : undefined,
-        orderNumber: r.NUMPED ?? undefined,
-        invoiceNumber: r.NUMNOTA ?? undefined,
-        subject: String(r.RELATOCLIENTE ?? ''),
-        origin: r.ORIGEM ? String(r.ORIGEM) : undefined,
-        status: normalizeStatus(r.STATUS, r.DTFINALIZA),
-        branch: r.CODFILIAL ? String(r.CODFILIAL) : undefined,
-      };
-
-      // Movimentações (se a tabela usa NUMSEQ>1 como histórico)
-      const history = await select<any>(
-        `
-        SELECT
-          BRSACC.NUMSEQ,
-          BRSACC.DTABERTURA AS DTMOV,
-          BRSACC.DTFINALIZA AS DTMOV_FINAL,
-          BRSACC.RELATOCLIENTE AS DESCRICAO,
-          BRSACC.STATUS
-        FROM ${OWNER}.BRSACC
-        WHERE BRSACC.NUMTICKETPRINC = :NUMTICKET
-          AND BRSACC.CODCLI = :CODCLI
-          AND NVL(BRSACC.STATUS,'') <> 'Cancelado'
-        ORDER BY BRSACC.NUMSEQ ASC
-        `,
-        { NUMTICKET: numTicket, CODCLI: codcli }
-      );
-
-      const timeline = history.map((h) => ({
-        seq: Number(h.NUMSEQ),
-        when: new Date(h.DTMOV ?? h.DTMOV_FINAL ?? r.DTABERTURA).toISOString(),
-        description: String(h.DESCRICAO ?? ''),
-        status: normalizeStatus(h.STATUS, h.DTMOV_FINAL),
-      }));
-
-      return reply.send({ ok: true, ticket, timeline });
     } catch (err) {
       return reply.status(400).send({ error: (err as Error).message });
     }

@@ -20,4 +20,4 @@ export async function fetchTicketDetail(id: string) {
   } catch (e: any) {
     return { ok: false, message: e?.message ?? 'Erro inesperado' };
   }
-}   
+}

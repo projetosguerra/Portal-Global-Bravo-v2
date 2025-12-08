@@ -35,7 +35,6 @@ export function classify(row: any): 'resolved' | 'in_progress' | 'pending' {
 }
 
 export async function getSACSeries(params: { codcli: number }): Promise<SACSeriesDTO> {
-    // hoje, tickets principais
     const rows = await select<any>(
         `
     SELECT
