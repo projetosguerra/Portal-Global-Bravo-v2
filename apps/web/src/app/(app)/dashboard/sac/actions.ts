@@ -26,12 +26,11 @@ export async function searchTicketsAction(form: {
     params.set('page', String(form.page ?? 1));
     params.set('pageSize', String(form.pageSize ?? 20));
 
-    const url = `${API_BASE}/dashboard/sac/tickets?${params.toString()}`;
-    const res = await fetch(url, {
-      headers: { Authorization: `Bearer ${token}` },
+    // Chama o proxy interno
+    const res = await fetch(`${process.env.NEXT_PUBLIC_SITE_ORIGIN ?? ''}/api/dashboard/sac/tickets?${params.toString()}`, {
       cache: 'no-store',
+      headers: { cookie: `pgb_session=${token}` },
     });
-    console.log('[searchTicketsAction] URL:', url, 'status:', res.status);
 
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
