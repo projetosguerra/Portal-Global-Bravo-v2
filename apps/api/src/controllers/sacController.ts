@@ -1,6 +1,8 @@
 import { getConnection } from '../db/pool';
+import { safeLogBinds } from '../utils/log';
 import { select } from '../db/query';
 import { OWNER } from '../utils/env';
+import type { FastifyRequest } from 'fastify';
 
 export type SACSeriesDTO = {
     labels: string[];
@@ -163,3 +165,34 @@ export async function createTicket(input: CreateTicketInput): Promise<CreateTick
         await conn.close();
     }
 } 
+
+export async function searchTickets(req: FastifyRequest) {
+  const q = req.query as any;
+  const binds = {
+    date_from: q.date_from ?? null,
+    date_to: q.date_to ?? null,
+    numped: q.numped ?? null,
+    numnota: q.numnota ?? null,
+    codcli: q.codcli ?? null,
+  };
+
+  req.log.info({ binds: safeLogBinds(binds, { fields: ['codcli'] }) }, 'SAC search binds');
+
+  // Exemplo de WHERE com binds opcionais
+  const rows = await select<any>(
+    `
+    SELECT /*+ FIRST_ROWS */ *
+    FROM ${OWNER}.SAC_TICKETS
+    WHERE 1=1
+      AND (:date_from IS NULL OR TRUNC(DTA_CAD) >= TRUNC(TO_DATE(:date_from, 'YYYY-MM-DD')))
+      AND (:date_to   IS NULL OR TRUNC(DTA_CAD) <= TRUNC(TO_DATE(:date_to, 'YYYY-MM-DD')))
+      AND (:numped    IS NULL OR NUMPED = :numped)
+      AND (:numnota   IS NULL OR NUMNOTA = :numnota)
+      AND (:codcli    IS NULL OR CODCLI = :codcli)
+    FETCH FIRST 200 ROWS ONLY
+    `,
+    binds
+  );
+
+  return rows;
+}
