@@ -115,8 +115,7 @@ export default function MeusPedidosPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Controle de Relacionamento com Cliente</h1>
-        <h2 className="text-xl font-semibold text-gray-800 mt-1">Pedidos e Notas Fiscais - Cliente Cod.: 964</h2>
+        <h1 className="text-2xl font-bold text-gray-900">Pedidos e Notas Fiscais</h1>
       </div>
 
       <Card className="p-5">

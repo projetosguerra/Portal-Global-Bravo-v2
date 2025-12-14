@@ -99,8 +99,7 @@ export default function EntregasPage() {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Controle de Relacionamento com Cliente</h1>
-        <h2 className="text-xl font-semibold text-gray-800 mt-1">Entregas</h2>
+        <h1 className="text-2xl font-bold text-gray-900">Entregas</h1>
       </div>
 
       {/* Filtros */}

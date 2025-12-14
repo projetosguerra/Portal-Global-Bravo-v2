@@ -6,6 +6,7 @@ import { getRecentOrders } from '../controllers/ordersController';
 import { getDocsValidity } from '../controllers/docsController';
 import { getSACSeries, createTicket } from '../controllers/sacController';
 import { select } from '../db/query';
+import { searchDeliveries } from '../controllers/deliveriesController';
 
 function normalizeStatus(status: any, dtFinaliza: any): 'pendente' | 'em_andamento' | 'finalizado' {
   if (dtFinaliza != null) return 'finalizado';
@@ -300,6 +301,35 @@ export default async function dashboardRoutes(app: FastifyInstance) {
       });
 
       return reply.send({ ok: true, ticket: created });
+    } catch (err) {
+      return reply.status(400).send({ error: (err as Error).message });
+    }
+  });
+
+  app.get('/deliveries', async (req, reply) => {
+    try {
+      const auth = req.headers.authorization;
+      if (!auth?.startsWith('Bearer ')) return reply.status(401).send({ error: 'Token ausente' });
+      const t = auth.slice(7);
+      const v = verifyToken(t, env.JWT_SECRET);
+      if (!v.ok) return reply.status(401).send({ error: v.error });
+      const codcli = Number(v.payload?.codcli);
+      if (!codcli) return reply.status(400).send({ error: 'CODCLI inválido no token' });
+
+      const q = req.query as { dateFrom?: string; dateTo?: string; nf?: string | number; page?: string | number; pageSize?: string | number };
+      const page = Math.max(1, Number(q.page ?? 1));
+      const pageSize = Math.max(1, Math.min(100, Number(q.pageSize ?? 10)));
+
+      const { list, total } = await searchDeliveries({
+        codcli,
+        dateFrom: q.dateFrom,
+        dateTo: q.dateTo,
+        nf: q.nf,
+        page,
+        pageSize,
+      });
+
+      return reply.send({ entregas: list, total, page, pageSize });
     } catch (err) {
       return reply.status(400).send({ error: (err as Error).message });
     }
